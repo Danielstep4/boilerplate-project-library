@@ -28,7 +28,22 @@ module.exports = function (app) {
 
   const Book = mongoose.model('Books', bookSchema);
   const Comment = mongoose.model('Comments', commentSchema);
-
+  // Function to get comments
+  const commentsById = (id) => {
+        let commentcount = 0;
+        let comments = []
+        Comment.find({ bookId: id }, (err, bookComments) => {
+          if(err) return console.log(err)
+          if(bookComments.length) {
+            commentcount = bookComments.length
+            comments = bookComments
+          }
+        })
+        return {
+          comments,
+          commentcount
+        }
+  }
   app.route('/api/books')
     .get(function (req, res){
       //response will be array of book objects
@@ -36,15 +51,8 @@ module.exports = function (app) {
       Book.find({}, (err, books) => {
         if(err) return console.log(err)
         books = books.map(book => {
-          let commentcount = 0;
-          let comments = []
-          Comment.find({ bookId: book._id }, (err, bookComments) => {
-            if(err) return console.log(err)
-            if(bookComments.length) {
-              commentcount = bookComments.length
-              comments = bookComments
-            }
-          })
+          let id = book._id
+          let { comments, commentcount } = commentsById(id)
           return {
             comments,
             _id: book._id,
@@ -89,6 +97,22 @@ module.exports = function (app) {
     .get(function (req, res){
       let bookid = req.params.id;
       //json res format: {"_id": bookid, "title": book_title, "comments": [comment,comment,...]}
+      Book.findById(bookid, (err, book) => {
+        if(err) return console.log(err)
+        if(!book) {
+          res.send('no book exists')
+        }
+        else {
+          let id = book._id
+          let { comments, commentcount } = commentsById(id)
+          res.json({
+            comments,
+            _id: book._id,
+            title: book.title,
+            commentcount
+          })
+        }
+      })
     })
     
     .post(function(req, res){
