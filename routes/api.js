@@ -32,15 +32,16 @@ module.exports = function (app) {
   const commentsById = async (id) => {
         let commentcount = 0;
         let comments = []
-        await Comment.find({ bookId: id }, (err, bookComments) => {
-          if(err) return console.log(err)
+        await Comment.find({ bookId: id }).then(bookComments => {
           if(bookComments.length) {
             commentcount = bookComments.length
             comments = bookComments.map(comment => {
               return comment.comment
             })
           }
-        })
+        }).catch(err => {
+          console.log(err)
+        });
         return {
           comments,
           commentcount
@@ -62,22 +63,27 @@ module.exports = function (app) {
     return result
   }
   app.route('/api/books')
-    .get(function (req, res){
+    .get(async function (req, res){
       //response will be array of book objects
       //json res format: [{"_id": bookid, "title": book_title, "commentcount": num_of_comments },...]
-      Book.find({}, (err, books) => {
-        if(err) return console.log(err)
-        books = books.map(book => {
+      Book.find({}).then(async books => {
+        books = books.map(async book => {
           let id = book._id
-          let { comments, commentcount } = commentsById(id)
-          return {
+          let { comments, commentcount } = await commentsById(id);
+          book = {
             comments,
-            _id: book._id,
+            _id: id,
             title: book.title,
             commentcount
           }
+          console.log(book)
+          return book
         })
-        res.json(books)
+        const result = await Promise.all(books)
+        res.json(result)
+        // res.json(books)
+      }).catch(err => {
+        console.log(err)
       })
     })
     
@@ -107,8 +113,6 @@ module.exports = function (app) {
         res.send('complete delete successful')
       })
     });
-
-
 
   app.route('/api/books/:id')
     .get(async function (req, res){
@@ -143,6 +147,13 @@ module.exports = function (app) {
     .delete(function(req, res){
       let bookid = req.params.id;
       //if successful response will be 'delete successful'
+      Book.findByIdAndDelete(bookid)
+      .then(() => {
+        res.send('delete successful')
+        console.log('delete successful')
+      }).catch(err => {
+        console.log(err)
+      })
     });
   
 };
