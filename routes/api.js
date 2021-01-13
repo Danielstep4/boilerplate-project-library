@@ -133,7 +133,10 @@ module.exports = function (app) {
         bookId: bookid,
         comment
       }).save(err => {
-        if(err) return console.log(err)
+        if(err) {
+          res.send('missing required field comment')
+          return console.log(err)
+        }
         console.log('Comment has been saved')
       })
       const result = await bookById(bookid)
@@ -147,12 +150,17 @@ module.exports = function (app) {
     .delete(function(req, res){
       let bookid = req.params.id;
       //if successful response will be 'delete successful'
-      Book.findByIdAndDelete(bookid)
-      .then(() => {
-        res.send('delete successful')
-        console.log('delete successful')
-      }).catch(err => {
-        console.log(err)
+      Book.findByIdAndDelete(bookid, (err, book) => {
+        if(err) {
+          res.send('no book exists')
+          return console.log(err)
+        }
+        if(!book) {
+          res.send('no book exists')
+        }else {
+          res.send('delete successful')
+          console.log('delete successful')
+        }
       })
     });
   
