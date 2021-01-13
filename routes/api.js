@@ -7,8 +7,27 @@
 */
 
 'use strict';
-
+const mongoose = require('mongoose')
 module.exports = function (app) {
+  //DB Configuration
+  mongoose.connect(process.env.DB, {useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
+  const db = mongoose.connection;
+
+  db.on('error', console.error.bind(console, 'connection error'));
+
+  const bookSchema = mongoose.Schema({
+    title: { type: String, required: true },
+    created_on: { type: Date, default: Date.now }
+  });
+
+  const commentSchema = mongoose.Schema({
+    comment: { type: String, required: true },
+    bookId: { type: String, required: true },
+    created_on: { type: Date, default: Date.now }
+  })
+  
+  const Library = mongoose.model('Library', bookSchema);
+  const Comment = mongoose.model('Comment', commentSchema);
 
   app.route('/api/books')
     .get(function (req, res){
