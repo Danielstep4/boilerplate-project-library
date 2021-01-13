@@ -25,19 +25,37 @@ module.exports = function (app) {
     bookId: { type: String, required: true },
     created_on: { type: Date, default: Date.now }
   })
-  
-  const Library = mongoose.model('Library', bookSchema);
-  const Comment = mongoose.model('Comment', commentSchema);
+
+  const Book = mongoose.model('Books', bookSchema);
+  const Comment = mongoose.model('Comments', commentSchema);
 
   app.route('/api/books')
     .get(function (req, res){
       //response will be array of book objects
       //json res format: [{"_id": bookid, "title": book_title, "commentcount": num_of_comments },...]
+      let commentcount;
+        Comment.find({ bookId: book._id }, (err, comments) => {
+          if(err) return console.log(err)
+          if(!comments.length) commentcount = 0;
+          else commentcount = comments.length
+        })
     })
     
     .post(function (req, res){
       let title = req.body.title;
-      //response will contain new book object including atleast _id and title
+      const newBook = new Book({
+        title
+      }).save((err,book) => {
+        if(err){
+          res.send('missing required field title')
+          return console.error(err)
+        }
+        console.log('New book has been saved!')
+        res.json({
+          _id: book._id,
+          title: book.title,
+        })
+      });
     })
     
     .delete(function(req, res){
