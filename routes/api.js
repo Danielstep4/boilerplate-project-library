@@ -33,12 +33,27 @@ module.exports = function (app) {
     .get(function (req, res){
       //response will be array of book objects
       //json res format: [{"_id": bookid, "title": book_title, "commentcount": num_of_comments },...]
-      let commentcount;
-        Comment.find({ bookId: book._id }, (err, comments) => {
-          if(err) return console.log(err)
-          if(!comments.length) commentcount = 0;
-          else commentcount = comments.length
+      Book.find({}, (err, books) => {
+        if(err) return console.log(err)
+        books = books.map(book => {
+          let commentcount = 0;
+          let comments = []
+          Comment.find({ bookId: book._id }, (err, bookComments) => {
+            if(err) return console.log(err)
+            if(bookComments.length) {
+              commentcount = bookComments.length
+              comments = bookComments
+            }
+          })
+          return {
+            comments,
+            _id: book._id,
+            title: book.title,
+            commentcount
+          }
         })
+        res.json(books)
+      })
     })
     
     .post(function (req, res){
@@ -60,6 +75,12 @@ module.exports = function (app) {
     
     .delete(function(req, res){
       //if successful response will be 'complete delete successful'
+      Book.deleteMany({}, err => {
+        if(err) return console.log(err)
+
+        console.log('complete delete successful')
+        res.send('complete delete successful')
+      })
     });
 
 
