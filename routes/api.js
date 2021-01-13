@@ -21,28 +21,45 @@ module.exports = function (app) {
   });
 
   const commentSchema = mongoose.Schema({
-    comment: { type: String, required: true },
     bookId: { type: String, required: true },
+    comment: { type: String, required: true },
     created_on: { type: Date, default: Date.now }
   })
 
   const Book = mongoose.model('Books', bookSchema);
   const Comment = mongoose.model('Comments', commentSchema);
   // Function to get comments
-  const commentsById = (id) => {
+  const commentsById = async (id) => {
         let commentcount = 0;
         let comments = []
-        Comment.find({ bookId: id }, (err, bookComments) => {
+        await Comment.find({ bookId: id }, (err, bookComments) => {
           if(err) return console.log(err)
           if(bookComments.length) {
             commentcount = bookComments.length
-            comments = bookComments
+            comments = bookComments.map(comment => {
+              return comment.comment
+            })
           }
         })
         return {
           comments,
           commentcount
         }
+  }
+  const bookById = async(id) => {
+    const result = await Book.findById(id).then(async book => {
+          let { comments, commentcount } = await commentsById(id)
+          let myBook = {
+            comments,
+            _id: book._id,
+            title: book.title,
+            commentcount
+          }
+          return myBook
+    }).catch(err => {
+      console.log(err)
+    })
+    return result
   }
   app.route('/api/books')
     .get(function (req, res){
@@ -94,31 +111,33 @@ module.exports = function (app) {
 
 
   app.route('/api/books/:id')
-    .get(function (req, res){
+    .get(async function (req, res){
       let bookid = req.params.id;
       //json res format: {"_id": bookid, "title": book_title, "comments": [comment,comment,...]}
-      Book.findById(bookid, (err, book) => {
-        if(err) return console.log(err)
-        if(!book) {
-          res.send('no book exists')
-        }
-        else {
-          let id = book._id
-          let { comments, commentcount } = commentsById(id)
-          res.json({
-            comments,
-            _id: book._id,
-            title: book.title,
-            commentcount
-          })
-        }
-      })
+      const result = await bookById(bookid)
+      if(!result) {
+        res.send('no book exists')
+      }else {
+        res.json(result)
+      }
     })
     
-    .post(function(req, res){
+    .post(async function(req, res){
       let bookid = req.params.id;
       let comment = req.body.comment;
-      //json res format same as .get
+      const newComment = new Comment({
+        bookId: bookid,
+        comment
+      }).save(err => {
+        if(err) return console.log(err)
+        console.log('Comment has been saved')
+      })
+      const result = await bookById(bookid)
+      if(!result) {
+        res.send('no book exists')
+      }else {
+        res.json(result)
+      }
     })
     
     .delete(function(req, res){
